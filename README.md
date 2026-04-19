@@ -80,15 +80,16 @@ flowchart TD
 You will need two separate terminal windows to run this tool.
 
 ### Terminal 1: Start the Ryu Controller
-Start the Ryu controller with the custom path tracing application:
+Start the Ryu controller with the custom path tracing application using your virtual environment:
 ```bash
-ryu-manager controller/path_tracer.py
+~/ryu_venv/bin/ryu-manager controller/path_tracer.py
 ```
 *You should see a message indicating the controller has started and is waiting for switches.*
 
 ### Terminal 2: Run the Mininet Topology
-In a new terminal, launch the custom network topology (requires `sudo`):
+In a new terminal, first clear any stale Mininet data, then launch the custom network topology (requires `sudo`):
 ```bash
+sudo mn -c
 sudo python3 topology/topology.py
 ```
 *This will create the network (Switches s1, s2 and Hosts h1, h2, h3, h4) and connect them to the controller.*

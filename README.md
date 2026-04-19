@@ -40,59 +40,38 @@ Before running the project, ensure you have the following installed on your Linu
 
 ## 🔄 How it Works (Workflow)
 
-### 1. Sequence Diagram
-
-```mermaid
-sequenceDiagram
-    participant H1 as Host (h1)
-    participant S1 as Switch (s1)
-    participant C0 as Ryu Controller
-    participant S2 as Switch (s2)
-    participant H4 as Host (h4)
-
-    H1->>S1: Send Packet (e.g., Ping h4)
-    S1->>C0: Packet-In (Destination Unknown)
-    Note over C0: 1. Learns h1 MAC & Port<br>2. Updates Trace Path
-    C0->>S1: Packet-Out (Flood)
-    S1->>S2: Forward to s2
-    S2->>C0: Packet-In
-    Note over C0: Learns Path continues to s2
-    C0->>S2: Packet-Out (Flood)
-    S2->>H4: Packet reaches h4
-
-    H4->>S2: Reply to h1
-    S2->>C0: Packet-In
-    Note over C0: Learns h4 MAC<br>Destination is now known!
-    C0->>S2: Install Flow-Mod Rule
-    C0->>S1: Install Flow-Mod Rule
-    Note over S1, S2: Subsequent packets are routed directly<br>without querying the controller.
-```
-
-### 2. Logic Flowchart
+### System Logic Flowchart
 
 ```mermaid
 flowchart TD
-    A[Host sends Packet] --> B[Switch receives Packet]
-    B --> C{Flow Rule Exists?}
-    C -- Yes --> D[Forward directly to Destination]
-    C -- No --> E[Send Packet-In to Ryu Controller]
-    E --> F[Controller learns Source MAC & Port]
-    F --> G[Controller updates Trace Path]
-    G --> H{Is Destination MAC known?}
-    H -- Yes --> I[Install Flow-Mod Rule on Switch]
-    I --> J[Forward Packet to Destination]
-    H -- No --> K[Packet-Out: Flood to all ports]
-    K --> L[Next Switch / Host receives Packet]
+    A[Start System] --> B[Run Ryu Controller]
+    B --> C[Run Mininet Topology]
+    C --> D[Switches Connect to Controller]
+    D --> E[Install Table-Miss Flow Rule]
+    E --> F[Packet Arrives at Switch]
+    F --> G{Known Destination MAC?}
+    G -- No --> H[Flood Packet]
+    H --> F
+    G -- Yes --> I[Forward to Correct Port]
+    I --> J[Track Path Across Switches]
+    J --> K[Display Path in Console]
+    K --> L[Install Flow Rule in Switch]
+    L --> M[Save Path to CSV Log]
+    M --> N[Continue Traffic Monitoring]
+    N --> F
 ```
 
-### 3. Step-by-Step Breakdown
+### Step-by-Step Breakdown
 
-1. **Initialization**: The Mininet topology script spins up the network and connects the Open vSwitch (OVS) nodes to the Ryu controller.
-2. **Packet-In Event**: When a host sends a packet (e.g., `h1` pings `h4`) and the switch doesn't know the destination, it forwards the packet to the Ryu controller via a `Packet-In` message.
-3. **MAC Learning**: The controller inspects the packet, extracts the source MAC address, and maps it to the incoming port of that specific switch.
-4. **Path Tracing**: As the packet traverses the switches, the controller builds and updates a trace path: `(Source MAC -> Switch 1 -> Switch 2 -> Destination MAC)`.
-5. **Flow-Mod Installation**: Once the destination is known, the controller pushes an OpenFlow `Flow-Mod` rule directly to the switches. Future packets between these hosts are routed at line-rate by the switches without querying the controller.
-6. **Logging**: The discovered path is printed to the console and appended to the `logs/paths.csv` file.
+1. **Start System**: The process begins by initializing the required tools.
+2. **Run Ryu Controller & Mininet**: The Ryu SDN controller is started, followed by the custom Mininet topology script.
+3. **Switches Connect to Controller**: The Open vSwitch (OVS) nodes automatically connect to the Ryu controller.
+4. **Install Table-Miss Flow Rule**: The controller installs a default rule on all switches so any unmatched packets are forwarded to the controller.
+5. **Packet Arrives at Switch**: When a host generates traffic (like a ping), the switch receives the packet.
+6. **Known Destination MAC?**: The controller checks if it has learned the destination MAC address.
+   - **No**: The controller commands the switch to **Flood the Packet** out of all ports (except the incoming port).
+   - **Yes**: The controller commands the switch to **Forward to the Correct Port**. It then **Tracks the Path**, **Displays it in the Console**, **Installs a Flow Rule** on the switch so future packets bypass the controller, and **Saves the Path to a CSV Log**.
+7. **Continue Monitoring**: The system continues to monitor traffic and loops back to handle new incoming packets.
 
 ---
 

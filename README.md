@@ -40,6 +40,8 @@ Before running the project, ensure you have the following installed on your Linu
 
 ## 🔄 How it Works (Workflow)
 
+### 1. Sequence Diagram
+
 ```mermaid
 sequenceDiagram
     participant H1 as Host (h1)
@@ -65,6 +67,25 @@ sequenceDiagram
     C0->>S1: Install Flow-Mod Rule
     Note over S1, S2: Subsequent packets are routed directly<br>without querying the controller.
 ```
+
+### 2. Logic Flowchart
+
+```mermaid
+flowchart TD
+    A[Host sends Packet] --> B[Switch receives Packet]
+    B --> C{Flow Rule Exists?}
+    C -- Yes --> D[Forward directly to Destination]
+    C -- No --> E[Send Packet-In to Ryu Controller]
+    E --> F[Controller learns Source MAC & Port]
+    F --> G[Controller updates Trace Path]
+    G --> H{Is Destination MAC known?}
+    H -- Yes --> I[Install Flow-Mod Rule on Switch]
+    I --> J[Forward Packet to Destination]
+    H -- No --> K[Packet-Out: Flood to all ports]
+    K --> L[Next Switch / Host receives Packet]
+```
+
+### 3. Step-by-Step Breakdown
 
 1. **Initialization**: The Mininet topology script spins up the network and connects the Open vSwitch (OVS) nodes to the Ryu controller.
 2. **Packet-In Event**: When a host sends a packet (e.g., `h1` pings `h4`) and the switch doesn't know the destination, it forwards the packet to the Ryu controller via a `Packet-In` message.

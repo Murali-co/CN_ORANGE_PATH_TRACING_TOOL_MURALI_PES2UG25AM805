@@ -40,6 +40,32 @@ Before running the project, ensure you have the following installed on your Linu
 
 ## 🔄 How it Works (Workflow)
 
+```mermaid
+sequenceDiagram
+    participant H1 as Host (h1)
+    participant S1 as Switch (s1)
+    participant C0 as Ryu Controller
+    participant S2 as Switch (s2)
+    participant H4 as Host (h4)
+
+    H1->>S1: Send Packet (e.g., Ping h4)
+    S1->>C0: Packet-In (Destination Unknown)
+    Note over C0: 1. Learns h1 MAC & Port<br>2. Updates Trace Path
+    C0->>S1: Packet-Out (Flood)
+    S1->>S2: Forward to s2
+    S2->>C0: Packet-In
+    Note over C0: Learns Path continues to s2
+    C0->>S2: Packet-Out (Flood)
+    S2->>H4: Packet reaches h4
+
+    H4->>S2: Reply to h1
+    S2->>C0: Packet-In
+    Note over C0: Learns h4 MAC<br>Destination is now known!
+    C0->>S2: Install Flow-Mod Rule
+    C0->>S1: Install Flow-Mod Rule
+    Note over S1, S2: Subsequent packets are routed directly<br>without querying the controller.
+```
+
 1. **Initialization**: The Mininet topology script spins up the network and connects the Open vSwitch (OVS) nodes to the Ryu controller.
 2. **Packet-In Event**: When a host sends a packet (e.g., `h1` pings `h4`) and the switch doesn't know the destination, it forwards the packet to the Ryu controller via a `Packet-In` message.
 3. **MAC Learning**: The controller inspects the packet, extracts the source MAC address, and maps it to the incoming port of that specific switch.

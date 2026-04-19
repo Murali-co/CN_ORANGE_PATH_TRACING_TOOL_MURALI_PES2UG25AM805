@@ -69,24 +69,30 @@ class CleanPathTracer(app_manager.RyuApp):
 
         actions = [parser.OFPActionOutput(out_port)]
 
-        if out_port != ofproto.OFPP_FLOOD:
+        path_key = (src, dst)
+        if path_key not in self.paths:
+            self.paths[path_key] = []
 
-            path_key = (src, dst)
-            if path_key not in self.paths:
-                self.paths[path_key] = []
-
-            if f"S{dpid}" not in self.paths[path_key]:
-                self.paths[path_key].append(f"S{dpid}")
-
-            path_str = f"{src[-5:]} → " + " → ".join(self.paths[path_key]) + f" → {dst[-5:]}"
-            print(f"🔥 PATH: {path_str}")
-
-            with open("logs/paths.csv", "a") as f:
-                f.write(path_str + "\n")
-
-            self.all_paths.append(path_str)
+        if f"S{dpid}" not in self.paths[path_key]:
+            self.paths[path_key].append(f"S{dpid}")
 
         if out_port != ofproto.OFPP_FLOOD:
+            if path_key not in self.all_paths:
+                reverse_key = (dst, src)
+                if reverse_key in self.paths and len(self.paths[reverse_key]) > len(self.paths[path_key]):
+                    complete_path = self.paths[reverse_key][::-1]
+                    self.paths[path_key] = complete_path
+                else:
+                    complete_path = self.paths[path_key]
+
+                path_str = f"{src[-5:]} → " + " → ".join(complete_path) + f" → {dst[-5:]}"
+                print(f"🔥 FULL PATH: {path_str}")
+
+                with open("logs/paths.csv", "a") as f:
+                    f.write(path_str + "\n")
+
+                self.all_paths.append(path_key)
+
             print(f"[FLOW] S{dpid}: {src} → {dst} via port {out_port}")
 
             match = parser.OFPMatch(
